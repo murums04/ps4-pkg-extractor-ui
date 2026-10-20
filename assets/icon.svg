@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <rect width="256" height="256" rx="52" fill="#0c121c"/>
+  <path d="M128 28 215 74v106l-87 48-87-48V74Z" fill="#142c38" stroke="#57ddc5" stroke-width="9" stroke-linejoin="round"/>
+  <path d="m43 75 85 47 85-47M128 122v104M84 52l87 47v35" fill="none" stroke="#57ddc5" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="61" y="136" width="134" height="53" rx="10" fill="#0c121c"/>
+  <text x="128" y="174" text-anchor="middle" font-family="Arial,sans-serif" font-size="39" font-weight="700" fill="#e9eef5">PKG</text>
+</svg>

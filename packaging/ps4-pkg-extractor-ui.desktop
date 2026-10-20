@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=murums PS4 PKG Extractor UI
+Comment=Extract PS4 PKG files into separate folders
+Exec=/opt/ps4-pkg-extractor-ui/ps4-pkg-extractor-ui %F
+Icon=ps4-pkg-extractor-ui
+Terminal=false
+Categories=Utility;Archiving;
+StartupNotify=true

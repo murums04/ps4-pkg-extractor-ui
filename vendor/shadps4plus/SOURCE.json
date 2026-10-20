@@ -1,0 +1,155 @@
+{
+  "repository": "https://github.com/AzaharPlus/shadPS4Plus",
+  "commit": "771a8d58aff540448c7cbace7c40a66a5daf010d",
+  "release": "PKG_EXTRACTOR_1_1",
+  "files": {
+    "LICENSE": {
+      "git_blob": "d159169d1050894d3ea3b98e1c965c4058208fe1",
+      "sha256": "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
+    },
+    "LICENSES/GPL-2.0-or-later.txt": {
+      "git_blob": "17cb286430a4d8094e473d06bd7f50f40438ddba",
+      "sha256": "aaf135472f81c5b4a0dca9367e5bb5e9750032b5bebe5442b36e4c0a47430df3"
+    },
+    "extractor/main.cpp": {
+      "git_blob": "bf9571b2a644df4ac7877589f79781eccf4787f7",
+      "sha256": "106e3304dbc969ecaf1135119b5d14b905d2bfa1aacd9a3d49ba2707000375e4"
+    },
+    "src/common/alignment.h": {
+      "git_blob": "3fb961c6322487b26c1c91efc5686ee628a27654",
+      "sha256": "f5822c8e3df7f6a7ca987b31141083a6ae6a4c0c8e9d813bd80d0678ff38f318"
+    },
+    "src/common/arch.h": {
+      "git_blob": "b22366cb7c9891604e575b0bc160db730eb5708b",
+      "sha256": "423677ca594bc3b53f6f058ea206bc3f77f0f4e5836520b722a107d7f5e07cc0"
+    },
+    "src/common/assert.cpp": {
+      "git_blob": "b3d55b1114f863e71093464f7a41ac387af9f593",
+      "sha256": "e8023bb73a1fbc647bb5054510fcc9bf1ec9a6dcc1244f5eeeed9161c090b153"
+    },
+    "src/common/assert.h": {
+      "git_blob": "dabeb111f805e558da7a23c58aa7c38585b503ea",
+      "sha256": "aee69a33aa0283d631364863479c6e1afe06bf859b816dfc733d59c5dd5d062c"
+    },
+    "src/common/concepts.h": {
+      "git_blob": "a61add7a1851a30a1221c1f3d8515429ee0f0279",
+      "sha256": "8e6a0f09760daec98922726f2406eddfca0f7807553c80e359b3edeba79e6f2b"
+    },
+    "src/common/endian.h": {
+      "git_blob": "4b0b70cdd1615746694389b019e28179a4fa996b",
+      "sha256": "a793cfb31a2039498c2f95c59c4188566ed77a57fce3b359a3f6cdbd0c842275"
+    },
+    "src/common/enum.h": {
+      "git_blob": "a2f08772c8558d6b49052969acf6c3168e050289",
+      "sha256": "2e2c6a568e49c02769b9ad55dde408000458cc8f3fddbc9910d5efb4404f61d2"
+    },
+    "src/common/error.cpp": {
+      "git_blob": "972a3428b551193682971f042d755443ad5b907f",
+      "sha256": "951e36e3cd184319c828aa678e60c26a094ec6b9691e4d9fc31a360089032a33"
+    },
+    "src/common/error.h": {
+      "git_blob": "62a3bd8357830dd8f3ed99e210127410ecb1dfc8",
+      "sha256": "e16954d28df7b8a4bf7766c169a230f0247930df74c7ca09dbee7cb51aed728c"
+    },
+    "src/common/io_file.cpp": {
+      "git_blob": "6ccb8cba982fbb1c62548e7942a4133f0defe896",
+      "sha256": "3211acf988b60f04a8f74c90c111f73403a071e30fd7a5a64346d6775f4293e9"
+    },
+    "src/common/io_file.h": {
+      "git_blob": "c6eb3b563badfc26adabc8ff9248de2904195503",
+      "sha256": "2ed874b277caafefae54c354be257ef115e7679eb7473ef5c5ac54c11f655b8d"
+    },
+    "src/common/logging/backend.h": {
+      "git_blob": "3003d1eaeb9b65317abf4401281c1ddf49602fa1",
+      "sha256": "83a37590b5046535bb769fdad2f07b19ef976eb4dfea3df0d9383fbc788f2def"
+    },
+    "src/common/logging/filter.h": {
+      "git_blob": "7c46fd8221f952f28437958d4849aadd688a773e",
+      "sha256": "8272d4ec9f46ddf88fd2b46cdbf0456c15055ef79cf6cff242f824ec826dd186"
+    },
+    "src/common/logging/log.h": {
+      "git_blob": "df1bd2e39291f20db324adcaf7e0329d63be83a0",
+      "sha256": "8c223a165f415136c7e1c93bf217dcff2fbbeb47b1873862f9b06284e31dab40"
+    },
+    "src/common/logging/types.h": {
+      "git_blob": "eee9d4ca28d73dd76e92b35f9d651609bacf0e86",
+      "sha256": "21f33bddeec9bf1a6d1052d7ea4ef8c52710e916010b3f10697d001971f47d54"
+    },
+    "src/common/ntapi.h": {
+      "git_blob": "c876af58f8d95dc0b6675799318d3d2fb64ce1f6",
+      "sha256": "66c26c83743ec84a87baa1d5fc11a7e117a5ff9aa8d12d2e3bc60663ed158e8d"
+    },
+    "src/common/path_util.cpp": {
+      "git_blob": "2e795d714c5ef73181983174d92135562d3ee8bc",
+      "sha256": "4cc05b8e3e5ca1f59c64f43d521c24d84856ae13ff0d6f02d8c994bdcdc8edd1"
+    },
+    "src/common/path_util.h": {
+      "git_blob": "af40b3974adef146f962ab8672d4f404dd37bcdd",
+      "sha256": "f79203dfd9a1dc03426624b6e30efffd9178aa0d7530aae7a2284e496cc09c89"
+    },
+    "src/common/scope_exit.h": {
+      "git_blob": "e8c70903111b26c888461cff9e459daa272b4e73",
+      "sha256": "268ee463a3511bd4f8dcc8d6428f059d17737b5f0b28e3ac13cda73369c14fa3"
+    },
+    "src/common/string_util.cpp": {
+      "git_blob": "4658d0ef4af31cc78ab1665e061027c4028048c0",
+      "sha256": "c067a05e2bc3ab67a9ef483bbeddab4dcfae0139799b74f37d48da39caaed9dc"
+    },
+    "src/common/string_util.h": {
+      "git_blob": "18972de4433e74d56ed96c98d1756fed7782da23",
+      "sha256": "9e0af99d6a710f01453bd4862c8ab7d5d7f25f3e83e1cd38268723cf95e15bfb"
+    },
+    "src/common/types.h": {
+      "git_blob": "c2b7bd35ea2767287a80b84dc756394c72a7af03",
+      "sha256": "d3f683316c81841456578d5faa3796ffda157c693dba7b558e18220a3b12a4bc"
+    },
+    "src/core/crypto/crypto.cpp": {
+      "git_blob": "4020edfd89fb9be0bfb71597696a4cdc16922005",
+      "sha256": "459b6cf65d17b3d069924bbfc0a4d0ff40ef1dad1b14e2938b964d18e783348d"
+    },
+    "src/core/crypto/crypto.h": {
+      "git_blob": "b5d8104b5311bf74fb0fbf63d494e2287989753f",
+      "sha256": "1ffdd7d4bf13aba566809acd6c5c9c117176b032d329d9ff3c6c98962aecbb92"
+    },
+    "src/core/crypto/keys.h": {
+      "git_blob": "44108248137c01e0332cff4726d67f886d136879",
+      "sha256": "44a738064e208e0349f161afe58bf13e1a8ab7653f09f6f7fd370c9ee6417e2b"
+    },
+    "src/core/file_format/pfs.h": {
+      "git_blob": "a79c3674ac14d251e8e4b09d4e58495244cab8eb",
+      "sha256": "db5ad836310acf543f21b951190ec4be58be1dca7d8434daa4eed577ef982590"
+    },
+    "src/core/file_format/pkg.cpp": {
+      "git_blob": "745e4513c1c7c25b45321f34c9ca21888c12b534",
+      "sha256": "5c2a3ecb0427365fdb2c68a3fe3ae76ec8c07aac8d0e5c2d1b4a346aaa46e69c"
+    },
+    "src/core/file_format/pkg.h": {
+      "git_blob": "8faffe3e41551fc6a45a94dd0a8c05b055f7d159",
+      "sha256": "d78144699656f45367cd2fba1331672eba6c4ee0cf05cf6636ac6d39ef378911"
+    },
+    "src/core/file_format/pkg_type.cpp": {
+      "git_blob": "464f0b9934a1e17da0f28811ce0a32b1e4b6c244",
+      "sha256": "e79609f587681eb61c236a1fe2d038d42116aceb533ad7daecde4be2c38cad6d"
+    },
+    "src/core/file_format/pkg_type.h": {
+      "git_blob": "6b010e3a387928322f22dc85e736b3ab0ff1dff9",
+      "sha256": "ab925041145177ee960af02b2ccf4a163a5dc8d398e71decb70661d1bf1a025e"
+    },
+    "src/core/file_format/psf.cpp": {
+      "git_blob": "7e0ffc9a3ceaf13471fb894db8c4209770240bb4",
+      "sha256": "a4d430cc03dcf91387a1703e611d1b0371c941eaf6c2277ceec75e09b4ad3b5b"
+    },
+    "src/core/file_format/psf.h": {
+      "git_blob": "0f66213159757ee7af37709504f8ad78288b23e9",
+      "sha256": "dd88587b092fa6d14285a0793ca7e4fdd73ecfa288eee0a732d7c620a2cf2cae"
+    },
+    "src/core/loader.cpp": {
+      "git_blob": "f80bfbb8168cf44ed2e27b1bbfe6c0263cd9cff8",
+      "sha256": "bb027a4b0be84757d32e147eff5aef85bf7b49a408b10309bcab3aee690c9da6"
+    },
+    "src/core/loader.h": {
+      "git_blob": "608970dca85d3bdec6aaa5fa6dbad1e8ba429efe",
+      "sha256": "aaf8e4a4a54b6a3b2a76f0ab939d401996609d05cff42dcdef2449276b5dd388"
+    }
+  }
+}

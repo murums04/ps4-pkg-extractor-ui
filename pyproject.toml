@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ps4-pkg-extractor-ui"
+version = "0.1.0"
+description = "Desktop UI for the shadPS4Plus PS4 PKG extractor"
+requires-python = ">=3.12"
+license = "GPL-3.0-only"
+authors = [{name = "murums"}]
+dependencies = ["PySide6-Essentials==6.10.3"]
+
+[project.gui-scripts]
+ps4-pkg-extractor-ui = "pkg_extractor_ui.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+addopts = "--basetemp=.work/pytest"

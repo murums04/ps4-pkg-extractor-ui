@@ -1,0 +1,2 @@
+vendor/shadps4plus/** -text
+packaging/native/*.patch -text whitespace=-blank-at-eol
