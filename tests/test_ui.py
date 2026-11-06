@@ -1,6 +1,7 @@
 import importlib
 import os
 import time
+from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -56,6 +57,55 @@ def test_failed_input_does_not_stop_next_job(tmp_path, app):
     assert screen.results == {0: "Failed", 1: "Extracted"}
     assert screen.extract_button.isEnabled()
     assert "1 failed" in screen.status_label.text()
+    screen.close()
+
+
+@pytest.mark.parametrize("output_name,use_home", [
+    ("output", False), (" output", False), ("output", True),
+    pytest.param("output ", False, marks=pytest.mark.skipif(
+        os.name == "nt", reason="Windows trims trailing spaces in directory names")),
+    pytest.param("output ", True, marks=pytest.mark.skipif(
+        os.name == "nt", reason="Windows trims trailing spaces in directory names")),
+])
+def test_output_path_preserves_selected_folder(tmp_path, app, monkeypatch, output_name, use_home):
+    from PySide6.QtGui import QDesktopServices
+    from PySide6.QtWidgets import QFileDialog
+
+    screen = window(app)
+    destination = tmp_path / output_name
+    destination.mkdir()
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *args: str(destination))
+    opened = []
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: opened.append(url.toLocalFile()) or True)
+    screen.add_files([write_pkg(tmp_path)])
+    screen.choose_output()
+    if use_home:
+        screen.output_edit.setText(f"~/{output_name}")
+    assert screen.open_button.isEnabled()
+    screen.start_extraction()
+    settle(app, screen)
+    assert screen.results == {0: "Extracted"}
+    assert (destination / "CUSA00001").is_dir()
+    if output_name != output_name.strip():
+        assert not (tmp_path / output_name.strip()).exists()
+    screen.open_output()
+    assert [Path(path) for path in opened] == [destination.resolve()]
+    screen.close()
+
+
+def test_unresolvable_home_disables_extraction(tmp_path, app, monkeypatch):
+    screen = window(app)
+    screen.add_files([write_pkg(tmp_path)])
+
+    def missing_home(path):
+        raise RuntimeError("Could not determine home directory")
+
+    monkeypatch.setattr(Path, "expanduser", missing_home)
+    screen.output_edit.setText("~/output")
+    assert not screen.extract_button.isEnabled()
+    assert not screen.open_button.isEnabled()
     screen.close()
 
 

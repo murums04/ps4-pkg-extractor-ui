@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
+- Fail extraction on native file-write and decompression errors.
+- Reject unsafe package output paths.
+- Fixed CLI report errors and output-folder paths.
 - Updated Pillow to 13.0.0, cryptography to 50.0.0 and setuptools to 84.1.0.
 - Removed macOS Intel builds and downloads; macOS now targets Apple Silicon only.
 

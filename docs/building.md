@@ -19,7 +19,7 @@ $env:PATH = "C:/msys64/ucrt64/bin;" + $env:PATH
 .venv/Scripts/python.exe scripts/build.py --iscc "C:/Program Files (x86)/Inno Setup 6/ISCC.exe"
 ```
 
-The build verifies the pinned extractor sources, applies the encrypted-entry correction to a build-directory copy and compiles the engine. It embeds the UTF-8 manifest, collects dependency notices, runs tests, builds the app, creates ZIP/setup/source packages and checks the packaged program. Outputs are under `packages/`; `packages/local/ps4-pkg-extractor-ui` is runnable.
+The build verifies the pinned extractor sources, applies the encrypted-entry and extraction-error corrections to a build-directory copy and compiles the engine. It embeds the UTF-8 manifest, collects dependency notices, runs tests, builds the app, creates ZIP/setup/source packages and checks the packaged program. Outputs are under `packages/`; `packages/local/ps4-pkg-extractor-ui` is runnable.
 
 Windows 10 version 1903 or newer is required by the UTF-8 process code page. The manifest change uses `scripts/windows_manifest.py` and `packaging/backend-windows.manifest`. The extractor links Crypto++, zlib and the GCC/MinGW runtime statically; its remaining DLL imports are Windows system libraries.
 
@@ -73,7 +73,7 @@ Headless extraction:
 ps4-pkg-extractor-ui --extract example.pkg --output-dir extracted --report result.json
 ```
 
-Reports must use a new filename. Completed extractions use numbered alternative folders.
+Reports must use a new filename; an unusable report path stops extraction before any output is written. Completed extractions use numbered alternative folders.
 
 The source-vendoring script verifies each downloaded file against the pinned Git tree. Normal builds use the included sources and do not refresh them. `scripts/verify.py distribution` rechecks their identities.
 

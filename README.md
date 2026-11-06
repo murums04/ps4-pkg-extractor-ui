@@ -12,13 +12,13 @@ Community GUI by **murums**, based on the [AzaharPlus/shadPS4Plus PKG extractor]
 
 ## Download
 
-**Version 0.1.0** · [SHA-256 checksums](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/SHA256SUMS.txt)
+**Version 0.1.1** · [SHA-256 checksums](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/SHA256SUMS.txt)
 
 | Platform | Installer | Portable |
 | --- | --- | --- |
-| Windows x64 | [Setup EXE](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.0-windows-x64-setup.exe) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.0-windows-x64-portable.zip) |
-| macOS · Apple Silicon | [DMG](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.0-macos-arm64.dmg) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.0-macos-arm64-portable.zip) |
-| Linux x64 | [DEB](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.0-linux-x64.deb) | [tar.gz](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.0-linux-x64-portable.tar.gz) |
+| Windows x64 | [Setup EXE](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-windows-x64-setup.exe) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-windows-x64-portable.zip) |
+| macOS · Apple Silicon | [DMG](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-macos-arm64.dmg) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-macos-arm64-portable.zip) |
+| Linux x64 | [DEB](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-linux-x64.deb) | [tar.gz](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-linux-x64-portable.tar.gz) |
 
 Choose an installer for normal use. All app packages include Python, Qt and the extractor. GitHub's **Code → Download ZIP** contains source code.
 
@@ -26,7 +26,7 @@ Choose an installer for normal use. All app packages include Python, Qt and the 
 - **macOS:** open the DMG and drag the app into Applications, or extract the app ZIP. Requires Apple Silicon and macOS 15 or newer.
 - **Linux:** install the DEB on Ubuntu 22.04 or newer, or extract the whole tar.gz and run `ps4-pkg-extractor-ui`. The DEB installs required system libraries.
 
-Windows executables are unsigned; macOS apps are ad-hoc signed and not notarized. Windows requires version 10 1903 or newer; Windows 10 itself has not been tested. See [supported systems and build details](docs/building.md).
+Windows executables are unsigned; macOS apps are ad-hoc signed and not notarized. Windows requires version 10 1903 or newer. See [supported systems and build details](docs/building.md).
 
 ## Use
 

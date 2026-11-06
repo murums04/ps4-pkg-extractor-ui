@@ -15,7 +15,8 @@ AzaharPlus/shadPS4Plus, derived from the shadPS4 Emulator Project.
 - The required source closure is included under `vendor/shadps4plus`, with per-file Git blob identities and SHA-256 values in `SOURCE.json`. The complete upstream source remains available at the referenced commit.
 - All platforms compile the pinned source with the CMake configuration in `packaging/native`.
 - `packaging/native/np-entry-padding.patch` corrects encrypted metadata reads, checks complete ciphertext blocks and verifies writes of decrypted entries. The build applies this project-owned patch to a build-directory copy; the vendored upstream files remain unchanged.
-- Windows builds use MSYS2 UCRT64 and add an application manifest for UTF-8 filenames and long-path awareness. The preparation script records the upstream revision, patch digest and executable hashes.
+- `packaging/native/extraction-errors.patch` checks metadata and payload writes, validates decompressed blocks and propagates failures to the extractor process. It is applied after the encrypted-metadata patch.
+- Windows builds use MSYS2 UCRT64 and add an application manifest for UTF-8 filenames and long-path awareness. The preparation script records the upstream revision, patch digests and executable hashes.
 
 Crypto++ is linked by the engine. Upstream references commit `effed0d0b865afc23ed67e0916f83734e4b9b3b7` of https://github.com/weidai11/cryptopp . Its compilation license and individual notices are in `licenses/Extractor/Crypto++.txt`.
 

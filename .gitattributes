@@ -1,2 +1,2 @@
 vendor/shadps4plus/** -text
-packaging/native/*.patch -text whitespace=-blank-at-eol
+packaging/native/*.patch -text whitespace=-blank-at-eol,-space-before-tab

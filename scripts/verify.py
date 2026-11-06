@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 
 from pkg_extractor_ui import __version__
 from pkg_extractor_ui.backend import bundled_command
-from tests.fixtures import write_encrypted_np_pkg, write_license_pkg, write_pkg
+from tests.fixtures import write_encrypted_np_pkg, write_license_pkg, write_payload_pkg, write_pkg
 
 
 def run_tests(native=False):
@@ -92,6 +92,21 @@ def check_executable(executable: Path, work: Path):
     assert [Path(item["output"]).name for item in metadata_results] == ["CUSA00001", "CUSA00001 (2)"]
     assert all(path.read_bytes() == contents for path, contents in originals.items())
     print("PACKAGED_ENCRYPTED_METADATA_AND_DLC_VERIFIED")
+    payload, plaintext = write_payload_pkg(work)
+    payload_report = work / "payload.json"
+    subprocess.run([str(executable), "--extract", str(payload), "--output-dir", str(work / "payload"),
+                    "--report", str(payload_report)], cwd=work, env=environment, timeout=30, check=True, **options)
+    payload_result = json.loads(payload_report.read_text(encoding="utf-8"))[0]
+    assert payload_result["status"] == "extracted"
+    assert (Path(payload_result["output"]) / "payload.bin").read_bytes() == plaintext
+    write_payload_pkg(work, corruption="checksum")
+    corrupt_report = work / "corrupt-payload.json"
+    failed = subprocess.run([str(executable), "--extract", str(payload), "--output-dir", str(work / "corrupt"),
+                             "--report", str(corrupt_report)], cwd=work, env=environment, timeout=30, **options)
+    assert failed.returncode == 1
+    assert json.loads(corrupt_report.read_text(encoding="utf-8"))[0]["status"] == "failed"
+    assert list((work / "corrupt").iterdir()) == []
+    print("PACKAGED_PFS_PAYLOAD_VERIFIED")
     bad = work / "broken.pkg"
     bad.write_bytes(b"not a package")
     bad_report = work / "failure.json"
@@ -154,7 +169,7 @@ def verify_distribution():
     required = ["LICENSE", "THIRD_PARTY_NOTICES.md", "docs/building.md", "docs/verification.md",
                 "packaging/installer.iss", "packaging/native/CMakeLists.txt",
                 "packaging/native/compatibility.h", "packaging/app.spec",
-                "packaging/native/np-entry-padding.patch",
+                "packaging/native/np-entry-padding.patch", "packaging/native/extraction-errors.patch",
                 "packaging/ps4-pkg-extractor-ui.desktop", ".github/workflows/build.yml",
                 "scripts/collect_linux_licenses.py", "scripts/collect_macos_licenses.py",
                 "scripts/collect_windows_backend_licenses.py",

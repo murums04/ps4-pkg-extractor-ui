@@ -35,13 +35,14 @@ def main():
     name = "pkg_extractor.exe" if windows else "pkg_extractor"
     executable = target / name
     shutil.copy2(build / name, executable)
-    patch = ROOT / "packaging/native/np-entry-padding.patch"
+    patches = [ROOT / "packaging/native" / name
+               for name in ("np-entry-padding.patch", "extraction-errors.patch")]
     record = {
         "release": RELEASE,
         "source": "vendor/shadps4plus",
         "commit": source_manifest["commit"],
-        "patch": patch.relative_to(ROOT).as_posix(),
-        "patch_sha256": hashlib.sha256(patch.read_bytes()).hexdigest(),
+        "patches": [{"path": patch.relative_to(ROOT).as_posix(),
+                     "sha256": hashlib.sha256(patch.read_bytes()).hexdigest()} for patch in patches],
         "built_for": f"{sys.platform}-{platform.machine()}",
     }
     if sys.platform == "win32":

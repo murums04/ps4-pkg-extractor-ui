@@ -276,17 +276,19 @@ class MainWindow(QMainWindow):
 
     def update_actions(self):
         busy = self.worker is not None
-        output_text = self.output_edit.text().strip()
+        output_text = self.output_edit.text()
         try:
             existing = bool(output_text) and Path(output_text).expanduser().is_dir()
-        except (OSError, ValueError):
+            valid_output = bool(output_text.strip())
+        except (OSError, ValueError, RuntimeError):
             existing = False
+            valid_output = False
         self.drop_area.setEnabled(not busy)
         self.output_edit.setEnabled(not busy)
         self.browse_button.setEnabled(not busy)
         self.remove_button.setEnabled(not busy and bool(self.table.selectedIndexes()))
         self.clear_button.setEnabled(not busy and bool(self.sources))
-        self.extract_button.setEnabled(not busy and bool(self.sources) and bool(output_text))
+        self.extract_button.setEnabled(not busy and bool(self.sources) and valid_output)
         self.open_button.setEnabled(existing)
         self.cancel_button.setVisible(busy)
 
@@ -298,7 +300,7 @@ class MainWindow(QMainWindow):
         self.progress.setRange(0, 0)
         for row in range(len(self.sources)):
             self.set_row(row, "Waiting", "—")
-        self.worker = ExtractionWorker(list(self.sources), Path(self.output_edit.text().strip()),
+        self.worker = ExtractionWorker(list(self.sources), Path(self.output_edit.text()),
                                        self, self.extractor_command)
         self.worker.file_started.connect(self.file_started)
         self.worker.progress_changed.connect(self.update_progress)
@@ -363,7 +365,7 @@ class MainWindow(QMainWindow):
         self.details_button.setText("Hide details" if visible else "Show details")
 
     def open_output(self):
-        path = str(Path(self.output_edit.text().strip()).expanduser().resolve())
+        path = str(Path(self.output_edit.text()).expanduser().resolve())
         if not QDesktopServices.openUrl(QUrl.fromLocalFile(path)):
             self.status_label.setText("Could not open folder. Copy the output path above.")
 

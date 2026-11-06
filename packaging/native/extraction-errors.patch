@@ -1,0 +1,633 @@
+--- a/pkg.cpp
++++ b/pkg.cpp
+@@ -5,27 +5,116 @@
+ #include "common/io_file.h"
+ #include "core/file_format/pkg.h"
+ #include "core/file_format/pkg_type.h"
+-
+-static void DecompressPFSC(std::span<char> compressed_data, std::span<char> decompressed_data) {
+-    z_stream decompressStream;
+-    decompressStream.zalloc = Z_NULL;
+-    decompressStream.zfree = Z_NULL;
+-    decompressStream.opaque = Z_NULL;
+-
+-    if (inflateInit(&decompressStream) != Z_OK) {
+-        // std::cerr << "Error initializing zlib for deflation." << std::endl;
+-    }
+-
+-    decompressStream.avail_in = compressed_data.size();
+-    decompressStream.next_in = reinterpret_cast<unsigned char*>(compressed_data.data());
+-    decompressStream.avail_out = decompressed_data.size();
+-    decompressStream.next_out = reinterpret_cast<unsigned char*>(decompressed_data.data());
+-
+-    if (inflate(&decompressStream, Z_FINISH)) {
+-    }
+-    if (inflateEnd(&decompressStream) != Z_OK) {
+-        // std::cerr << "Error ending zlib inflate" << std::endl;
+-    }
++#ifdef _WIN32
++#include <windows.h>
++#endif
++
++static bool DecompressPFSC(std::span<char> compressed_data, std::span<char> decompressed_data) {
++    z_stream stream{};
++    if (inflateInit(&stream) != Z_OK) {
++        return false;
++    }
++    stream.avail_in = compressed_data.size();
++    stream.next_in = reinterpret_cast<unsigned char*>(compressed_data.data());
++    stream.avail_out = decompressed_data.size();
++    stream.next_out = reinterpret_cast<unsigned char*>(decompressed_data.data());
++    const int result = inflate(&stream, Z_FINISH);
++    const bool complete = result == Z_STREAM_END && stream.total_out == decompressed_data.size() &&
++                          stream.avail_in == 0;
++    const int end_result = inflateEnd(&stream);
++    return complete && end_result == Z_OK;
++}
++
++bool PKG::IsSafePathComponent(std::string_view name) {
++    if (name.empty() || name == "." || name == ".." || name.back() == '.' || name.back() == ' ') {
++        return false;
++    }
++    for (unsigned char c : name) {
++        if (c < 0x20 || std::string_view("<>:\"/\\|?*").find(c) != std::string_view::npos) {
++            return false;
++        }
++    }
++    std::string stem(name.substr(0, name.find('.')));
++    while (!stem.empty() && stem.back() == ' ') {
++        stem.pop_back();
++    }
++    for (char& c : stem) {
++        if (c >= 'a' && c <= 'z') {
++            c -= 'a' - 'A';
++        }
++    }
++    if (stem == "CON" || stem == "PRN" || stem == "AUX" || stem == "NUL" ||
++        stem == "CONIN$" || stem == "CONOUT$" || stem == "CLOCK$") {
++        return false;
++    }
++    if (stem.starts_with("COM") || stem.starts_with("LPT")) {
++        const auto suffix = std::string_view(stem).substr(3);
++        if ((suffix.size() == 1 && suffix[0] >= '1' && suffix[0] <= '9') ||
++            suffix == "\xC2\xB9" || suffix == "\xC2\xB2" || suffix == "\xC2\xB3") {
++            return false;
++        }
++    }
++    return true;
++}
++
++bool PKG::IsSafeOutputPath(const std::filesystem::path& root, const std::filesystem::path& path) {
++    std::error_code error;
++    auto current = root;
++    const auto relative = path.lexically_relative(root);
++    if (relative.empty()) {
++        return path == root;
++    }
++    for (const auto& part : relative) {
++        if (part == "..") {
++            return false;
++        }
++        current /= part;
++#ifdef _WIN32
++        const auto attributes = GetFileAttributesW(current.c_str());
++        if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
++            return false;
++        }
++#endif
++        if (std::filesystem::is_symlink(std::filesystem::symlink_status(current, error))) {
++            return false;
++        }
++        if (error && error != std::errc::no_such_file_or_directory) {
++            return false;
++        }
++        error.clear();
++    }
++    const auto resolved = std::filesystem::weakly_canonical(path, error);
++    if (error) {
++        return false;
++    }
++    auto component = resolved.begin();
++    for (const auto& root_component : root) {
++        if (component == resolved.end() || *component++ != root_component) {
++            return false;
++        }
++    }
++    return true;
++}
++
++bool PKG::IsWithinExtractionRoot(const std::filesystem::path& path) const {
++    return IsSafeOutputPath(extract_path, path);
++}
++
++static bool ReadPfsDirent(std::span<const char> block, size_t offset, Dirent& entry) {
++    constexpr size_t header_size = offsetof(Dirent, name);
++    if (offset > block.size() || block.size() - offset < header_size) {
++        return false;
++    }
++    std::memcpy(&entry, block.data() + offset, header_size);
++    if (entry.ino == 0) {
++        return true;
++    }
++    if (entry.ino < 0 || entry.namelen <= 0 || entry.namelen > sizeof(entry.name) ||
++        entry.entsize < header_size + entry.namelen || entry.entsize > block.size() - offset) {
++        return false;
++    }
++    std::memcpy(entry.name, block.data() + offset + header_size, entry.namelen);
++    return true;
+ }
+ 
+ u32 GetPFSCOffset(std::span<const u8> pfs_image) {
+@@ -103,7 +192,12 @@
+ 
+ bool PKG::Extract(const std::filesystem::path& filepath, const std::filesystem::path& extract,
+                   std::string& failreason) {
+-    extract_path = extract;
++    std::error_code path_error;
++    extract_path = std::filesystem::weakly_canonical(extract, path_error);
++    if (path_error) {
++        failreason = "Invalid extraction root";
++        return false;
++    }
+     pkgpath = filepath;
+     Common::FS::IOFile file(filepath, Common::FS::FileAccessMode::Read);
+     if (!file.IsOpen()) {
+@@ -152,7 +246,12 @@
+ 
+         // Try to figure out the name
+         const auto name = GetEntryNameByType(entry.id);
+-        const auto filepath = extract_path / "sce_sys" / name;
++        const auto filepath = extract_path / "sce_sys" /
++                              (name.empty() ? std::to_string(entry.id) : std::string(name));
++        if (!IsWithinExtractionRoot(filepath)) {
++            failreason = "PKG output path escapes extraction root";
++            return false;
++        }
+         std::filesystem::create_directories(filepath.parent_path());
+ 
+         if (name.empty()) {
+@@ -167,9 +266,10 @@
+             std::vector<u8> data;
+             data.resize(entry.size);
+             file.ReadRaw<u8>(data.data(), entry.size);
+-            out.WriteRaw<u8>(data.data(), entry.size);
+-            out.Close();
+-
++            if (!out.IsOpen() || out.Write(data) != data.size() || !out.Flush() || !out.Close()) {
++                failreason = "Failed to write PKG entry";
++                return false;
++            }
+             file.Seek(currentPos);
+             continue;
+         }
+@@ -216,8 +316,10 @@
+         std::vector<u8> data;
+         data.resize(entry.size);
+         file.ReadRaw<u8>(data.data(), entry.size);
+-        out.WriteRaw<u8>(data.data(), entry.size);
+-        out.Close();
++        if (!out.IsOpen() || out.Write(data) != data.size() || !out.Flush() || !out.Close()) {
++            failreason = "Failed to write PKG entry";
++            return false;
++        }
+ 
+         // CBC needs the complete ciphertext block, including bytes beyond the logical size.
+         if (entry.id == 0x400 || entry.id == 0x401 || entry.id == 0x402 || entry.id == 0x403) {
+@@ -248,7 +350,7 @@
+             decNp.resize(plaintext_size);
+             Common::FS::IOFile out(extract_path / "sce_sys" / name,
+                                    Common::FS::FileAccessMode::Write);
+-            if (!out.IsOpen() || out.Write(decNp) != plaintext_size || !out.Flush()) {
++            if (!out.IsOpen() || out.Write(decNp) != plaintext_size || !out.Flush() || !out.Close()) {
+                 failreason = "Failed to write decrypted PKG entry";
+                 return false;
+             }
+@@ -314,8 +416,15 @@
+ 
+         if (sectorSize == 0x10000) // Uncompressed data
+             std::memcpy(decompressedData.data(), compressedData.data(), 0x10000);
+-        else if (sectorSize < 0x10000) // Compressed data
+-            DecompressPFSC(compressedData, decompressedData);
++        else if (sectorSize > 0 && sectorSize < 0x10000) { // Compressed data
++            if (!DecompressPFSC(compressedData, decompressedData)) {
++                failreason = "Failed to decompress PFS metadata block";
++                return false;
++            }
++        } else {
++            failreason = "Invalid PFS metadata block size";
++            return false;
++        }
+ 
+         if (i == 0) {
+             std::memcpy(&ndinode, decompressedData.data() + 0x30, 4); // number of folders and files
+@@ -327,7 +436,7 @@
+             occupied_blocks += 1;
+ 
+         if (i >= 1 && i <= occupied_blocks) { // Get all iNodes, gives type, file size and location.
+-            for (int p = 0; p < 0x10000; p += 0xA8) {
++            for (int p = 0; p + sizeof(Inode) <= decompressedData.size(); p += 0xA8) {
+                 Inode node;
+                 std::memcpy(&node, &decompressedData[p], sizeof(node));
+                 if (node.Mode == 0) {
+@@ -346,24 +455,21 @@
+ 
+         if (uroot_reached) {
+             for (int i = 0; i < 0x10000; i += ent_size) {
+-                Dirent dirent;
+-                std::memcpy(&dirent, &decompressedData[i], sizeof(dirent));
++                Dirent dirent{};
++                if (!ReadPfsDirent(decompressedData, i, dirent) ||
++                    (dirent.ino != 0 && dirent.ino >= iNodeBuf.size())) {
++                    failreason = "Invalid PFS root directory entry";
++                    return false;
++                }
+                 ent_size = dirent.entsize;
+                 if (dirent.ino != 0) {
+                     ndinode_counter++;
+                 } else {
+-                    // Set the the folder according to the current inode.
+-                    // Can be 2 or more (rarely)
+-                    auto parent_path = extract_path.parent_path();
+-                    auto title_id = GetTitleID();
+-
+-                    if (parent_path.filename() != title_id &&
+-                        !extract_path.string().ends_with("-patch")) {
+-                        extractPaths[ndinode_counter] = parent_path / title_id;
+-                    } else {
+-                        // DLCs path has different structure
+-                        extractPaths[ndinode_counter] = extract_path;
++                    if (ndinode_counter >= iNodeBuf.size()) {
++                        failreason = "Invalid PFS root inode";
++                        return false;
+                     }
++                    directoryPaths[ndinode_counter] = extract_path;
+                     uroot_reached = false;
+                     break;
+                 }
+@@ -380,28 +486,57 @@
+         bool end_reached = false;
+         if (dinode_reached) {
+             for (int j = 0; j < 0x10000; j += ent_size) { // Skip the first parent and child.
+-                Dirent dirent;
+-                std::memcpy(&dirent, &decompressedData[j], sizeof(dirent));
+-
+-                // Stop here and continue the main loop
++                Dirent dirent{};
++                if (!ReadPfsDirent(decompressedData, j, dirent)) {
++                    failreason = "Invalid PFS directory record";
++                    return false;
++                }
+                 if (dirent.ino == 0) {
+                     break;
+                 }
+-
++                if (dirent.ino >= iNodeBuf.size()) {
++                    failreason = "Invalid PFS directory inode";
++                    return false;
++                }
+                 ent_size = dirent.entsize;
++                const std::string name(dirent.name, dirent.namelen);
++                if (dirent.type == PFS_CURRENT_DIR) {
++                    const auto parent = directoryPaths.find(dirent.ino);
++                    if (name != "." || parent == directoryPaths.end() ||
++                        !IsWithinExtractionRoot(parent->second)) {
++                        failreason = "Invalid PFS current directory";
++                        return false;
++                    }
++                    current_dir = parent->second;
++                    continue;
++                }
++                if (dirent.type == PFS_PARENT_DIR) {
++                    if (name != ".." || current_dir.empty()) {
++                        failreason = "Invalid PFS parent directory";
++                        return false;
++                    }
++                    continue;
++                }
++                if ((dirent.type != PFS_FILE && dirent.type != PFS_DIR) ||
++                    !IsSafePathComponent(name) || current_dir.empty() ||
++                    extractPaths.contains(dirent.ino) || directoryPaths.contains(dirent.ino)) {
++                    failreason = "Invalid PFS output name or inode";
++                    return false;
++                }
++                const auto path = current_dir / std::filesystem::u8path(name);
++                if (!IsWithinExtractionRoot(path)) {
++                    failreason = "PFS output path escapes extraction root";
++                    return false;
++                }
+                 auto& table = fsTable.emplace_back();
+-                table.name = std::string(dirent.name, dirent.namelen);
++                table.name = name;
+                 table.inode = dirent.ino;
+                 table.type = dirent.type;
+-
+-                if (table.type == PFS_CURRENT_DIR) {
+-                    current_dir = extractPaths[table.inode];
+-                }
+-                extractPaths[table.inode] = current_dir / std::filesystem::path(table.name);
+-
++                extractPaths[table.inode] = path;
+                 if (table.type == PFS_FILE || table.type == PFS_DIR) {
+-                    if (table.type == PFS_DIR) { // Create dirs.
+-                        std::filesystem::create_directory(extractPaths[table.inode]);
++                    if (table.type == PFS_DIR) {
++                        std::filesystem::create_directory(path);
++                        directoryPaths[table.inode] = path;
+                     }
+                     ndinode_counter++;
+                     if ((ndinode_counter + 1) == ndinode) // 1 for the image itself (root).
+@@ -413,69 +548,86 @@
+             }
+         }
+     }
++    if (num_blocks != 0 && ndinode_counter + 1 != ndinode) {
++        failreason = "Incomplete PFS directory table";
++        return false;
++    }
+     return true;
+ }
+ 
+-void PKG::ExtractFiles(const int index) {
+-    int inode_number = fsTable[index].inode;
+-    int inode_type = fsTable[index].type;
+-    std::string inode_name = fsTable[index].name;
+-
+-    if (inode_type == PFS_FILE) {
+-        int sector_loc = iNodeBuf[inode_number].loc;
+-        int nblocks = iNodeBuf[inode_number].Blocks;
+-        int bsize = iNodeBuf[inode_number].Size;
+-
+-        Common::FS::IOFile inflated;
+-        inflated.Open(extractPaths[inode_number], Common::FS::FileAccessMode::Write);
+-
+-        Common::FS::IOFile pkgFile; // Open the file for each iteration to avoid conflict.
+-        pkgFile.Open(pkgpath, Common::FS::FileAccessMode::Read);
+-
+-        int size_decompressed = 0;
+-        std::vector<char> compressedData;
+-        std::vector<char> decompressedData(0x10000);
+-
+-        u64 pfsc_buf_size = 0x11000; // extra 0x1000
+-        std::vector<u8> pfsc(pfsc_buf_size);
+-        std::vector<u8> pfs_decrypted(pfsc_buf_size);
+-
+-        for (int j = 0; j < nblocks; j++) {
+-            u64 sectorOffset =
+-                sectorMap[sector_loc + j]; // offset into PFSC_image and not pfs_image.
+-            u64 sectorSize = sectorMap[sector_loc + j + 1] -
+-                             sectorOffset; // indicates if data is compressed or not.
+-            u64 fileOffset = (pkgheader.pfs_image_offset + pfsc_offset + sectorOffset);
+-            u64 currentSector1 =
+-                (pfsc_offset + sectorOffset) / 0x1000; // block size is 0x1000 for xts decryption.
+-
+-            int sectorOffsetMask = (sectorOffset + pfsc_offset) & 0xFFFFF000;
+-            int previousData = (sectorOffset + pfsc_offset) - sectorOffsetMask;
+-
+-            pkgFile.Seek(fileOffset - previousData);
+-            pkgFile.Read(pfsc);
+-
+-            PKG::crypto.decryptPFS(dataKey, tweakKey, pfsc, pfs_decrypted, currentSector1);
+-
+-            compressedData.resize(sectorSize);
+-            std::memcpy(compressedData.data(), pfs_decrypted.data() + previousData, sectorSize);
+-
+-            if (sectorSize == 0x10000) // Uncompressed data
+-                std::memcpy(decompressedData.data(), compressedData.data(), 0x10000);
+-            else if (sectorSize < 0x10000) // Compressed data
+-                DecompressPFSC(compressedData, decompressedData);
+-
+-            size_decompressed += 0x10000;
+-
+-            if (j < nblocks - 1) {
+-                inflated.WriteRaw<u8>(decompressedData.data(), decompressedData.size());
+-            } else {
+-                // This is to remove the zeros at the end of the file.
+-                const u32 write_size = decompressedData.size() - (size_decompressed - bsize);
+-                inflated.WriteRaw<u8>(decompressedData.data(), write_size);
+-            }
+-        }
+-        pkgFile.Close();
+-        inflated.Close();
+-    }
+-}
++bool PKG::ExtractFiles(const int index, std::string& failreason) {
++    const auto& entry = fsTable[index];
++    if (entry.type != PFS_FILE) {
++        return true;
++    }
++    if (entry.inode >= iNodeBuf.size() || !extractPaths.contains(entry.inode)) {
++        failreason = "Invalid PFS file inode";
++        return false;
++    }
++    const auto& node = iNodeBuf[entry.inode];
++    const auto& path = extractPaths.at(entry.inode);
++    if (!IsSafePathComponent(entry.name) || !IsWithinExtractionRoot(path)) {
++        failreason = "PFS output path escapes extraction root";
++        return false;
++    }
++    if (node.Size < 0 || node.Blocks != (static_cast<u64>(node.Size) + 0xFFFF) / 0x10000 ||
++        static_cast<u64>(node.loc) + node.Blocks >= sectorMap.size()) {
++        failreason = "Invalid PFS file size or block count";
++        return false;
++    }
++    Common::FS::IOFile output(path, Common::FS::FileAccessMode::Write);
++    if (!output.IsOpen()) {
++        failreason = "Failed to open PFS output file";
++        return false;
++    }
++    Common::FS::IOFile pkgFile(pkgpath, Common::FS::FileAccessMode::Read);
++    if (!pkgFile.IsOpen()) {
++        failreason = "Failed to open PKG payload";
++        return false;
++    }
++    u64 remaining = node.Size;
++    std::vector<char> decompressedData(0x10000);
++    for (u32 j = 0; j < node.Blocks; j++) {
++        const u64 sectorOffset = sectorMap[node.loc + j];
++        const u64 sectorEnd = sectorMap[node.loc + j + 1];
++        if (sectorEnd <= sectorOffset || sectorEnd - sectorOffset > 0x10000) {
++            failreason = "Invalid PFS payload block size";
++            return false;
++        }
++        const u64 sectorSize = sectorEnd - sectorOffset;
++        const u64 offset = pfsc_offset + sectorOffset;
++        const u64 previousData = offset % 0x1000;
++        const u64 readSize = (previousData + sectorSize + 0xFFF) & ~u64{0xFFF};
++        std::vector<u8> encrypted(readSize);
++        std::vector<u8> decrypted(readSize);
++        if (!pkgFile.Seek(pkgheader.pfs_image_offset + offset - previousData) ||
++            pkgFile.Read(encrypted) != readSize) {
++            failreason = "Failed to read complete PFS payload block";
++            return false;
++        }
++        crypto.decryptPFS(dataKey, tweakKey, encrypted, decrypted, offset / 0x1000);
++        std::span<char> compressedData(reinterpret_cast<char*>(decrypted.data() + previousData),
++                                       sectorSize);
++        if (sectorSize == 0x10000) {
++            std::memcpy(decompressedData.data(), compressedData.data(), decompressedData.size());
++        } else if (!DecompressPFSC(compressedData, decompressedData)) {
++            failreason = "Failed to decompress PFS payload block";
++            return false;
++        }
++        const size_t writeSize = std::min<u64>(remaining, decompressedData.size());
++        if (output.WriteSpan<char>(std::span<const char>(decompressedData.data(), writeSize)) != writeSize) {
++            failreason = "Failed to write complete PFS output file";
++            return false;
++        }
++        remaining -= writeSize;
++    }
++    if (!output.Flush()) {
++        failreason = "Failed to flush PFS output file";
++        return false;
++    }
++    if (!output.Close()) {
++        failreason = "Failed to close PFS output file";
++        return false;
++    }
++    return true;
++}
+--- a/core/file_format/pkg.h
++++ b/core/file_format/pkg.h
+@@ -10,7 +10,7 @@
+ #include <vector>
+ #include "common/endian.h"
+ #include "core/crypto/crypto.h"
+-#include "pfs.h"
++#include "core/file_format/pfs.h"
+ 
+ struct PKGHeader {
+     u32_be magic; // Magic
+@@ -102,8 +102,11 @@
+     PKG();
+     ~PKG();
+ 
++    static bool IsSafePathComponent(std::string_view name);
++    static bool IsSafeOutputPath(const std::filesystem::path& root, const std::filesystem::path& path);
++
+     bool Open(const std::filesystem::path& filepath, std::string& failreason);
+-    void ExtractFiles(const int index);
++    bool ExtractFiles(const int index, std::string& failreason);
+     bool Extract(const std::filesystem::path& filepath, const std::filesystem::path& extract,
+                  std::string& failreason);
+ 
+@@ -146,6 +149,8 @@
+          {PKGContentFlag::CUMULATIVE_PATCH, "CUMULATIVE_PATCH"}}};
+ 
+ private:
++    bool IsWithinExtractionRoot(const std::filesystem::path& path) const;
++    std::unordered_map<int, std::filesystem::path> directoryPaths;
+     Crypto crypto;
+     u64 pkgSize = 0;
+     char pkgTitleID[9];
+--- a/main.cpp
++++ b/main.cpp
+@@ -37,6 +37,21 @@
+ 			}else{
+ 				std::cout << "open PSF success" << std::endl;
+ 				
++                std::error_code path_error;
++                auto output_base = std::filesystem::absolute(
++                    output_folder_path.empty() ? std::filesystem::path(".") : output_folder_path, path_error);
++                if (!path_error) {
++                    output_base = std::filesystem::weakly_canonical(output_base, path_error);
++                }
++                if (path_error) {
++                    std::cout << "Cannot extract PKG file : Invalid output folder" << std::endl;
++                    return 1;
++                }
++                output_folder_path = output_base;
++                if (!PKG::IsSafePathComponent(pkg.GetTitleID())) {
++                    std::cout << "Cannot extract PKG file : Invalid title ID" << std::endl;
++                    return 1;
++                }
+ 				output_folder_path /= pkg.GetTitleID();
+ 				
+ 				std::string category;
+@@ -58,10 +73,15 @@
+ 					std::string content_id;
+ 					if (auto value = psf.GetString("CONTENT_ID"); value.has_value()) {
+ 						content_id = std::string{*value};
+-						std::string entitlement_label = Common::SplitString(content_id, '-')[2];
+-						output_folder_path /= entitlement_label;
++                        const auto parts = Common::SplitString(content_id, '-');
++                        if (parts.size() != 3 || !PKG::IsSafePathComponent(parts[2])) {
++                            std::cout << "Cannot extract PKG file : Invalid DLC content ID" << std::endl;
++                            return 1;
++                        }
++						output_folder_path /= parts[2];
+ 					} else {
+ 						std::cout << "PSF file there is no CONTENT_ID" << std::endl;
++                        return 1;
+ 					}
+ 				}else{
+ 					std::cout << "pkg is a base game" << std::endl;
+@@ -73,17 +93,25 @@
+ 					return ret;
+ 				}
+ 				
++                if (!PKG::IsSafeOutputPath(output_base, output_folder_path)) {
++                    std::cout << "Cannot extract PKG file : Unsafe package output folder" << std::endl;
++                    return 1;
++                }
+ 				std::cout << "Extracting pkg to " << output_folder_path << std::endl;
+ 				
+ 				if (!pkg.Extract(file, output_folder_path, failreason)) {
+ 					std::cout << "Cannot extract PKG file : " << failreason << std::endl;
++					return 1;
+ 				} else {
+ 					int nfiles = pkg.GetNumberOfFiles();
+ 					
+ 					for(int i=0; i<nfiles; i++)
+ 					{
+ 						std::cout << "Extracting file " << i+1 << " of " << nfiles << " to " << output_folder_path << std::endl;
+-						pkg.ExtractFiles(i);
++						if (!pkg.ExtractFiles(i, failreason)) {
++							std::cout << "Cannot extract PKG file : " << failreason << std::endl;
++							return 1;
++						}
+ 					}
+ 				}
+ 			}
+--- a/common/io_file.h
++++ b/common/io_file.h
+@@ -10,7 +10,7 @@
+ 
+ #include "common/concepts.h"
+ #include "common/types.h"
+-#include "enum.h"
++#include "common/enum.h"
+ 
+ namespace Common::FS {
+ 
+@@ -107,7 +107,7 @@
+     int Open(const std::filesystem::path& path, FileAccessMode mode,
+              FileType type = FileType::BinaryFile,
+              FileShareFlag flag = FileShareFlag::ShareReadOnly);
+-    void Close();
++    bool Close();
+ 
+     void Unlink();
+ 
+--- a/io_file.cpp
++++ b/io_file.cpp
+@@ -201,9 +201,9 @@
+     return result;
+ }
+ 
+-void IOFile::Close() {
+-    if (!IsOpen()) {
+-        return;
++bool IOFile::Close() {
++    if (!IsOpen()) {
++        return true;
+     }
+ 
+     errno = 0;
+@@ -223,6 +223,7 @@
+         CloseHandle(std::bit_cast<HANDLE>(file_mapping));
+     }
+ #endif
++    return close_result;
+ }
+ 
+ void IOFile::Unlink() {
