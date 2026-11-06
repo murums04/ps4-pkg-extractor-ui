@@ -69,13 +69,12 @@ def check_macos_application(application, work, label):
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(application)], check=True)
     executable = application / "Contents/MacOS/PS4 PKG Extractor UI"
     architecture = subprocess.check_output(["lipo", "-archs", str(executable)], text=True).strip()
-    assert architecture == platform.machine(), architecture
+    assert architecture == "arm64", architecture
     check_application(executable, work, label)
 
 
 def verify_macos(work):
-    architecture = {"arm64": "arm64", "x86_64": "x64"}[platform.machine()]
-    prefix = f"ps4-pkg-extractor-ui-{__version__}-macos-{architecture}"
+    prefix = f"ps4-pkg-extractor-ui-{__version__}-macos-arm64"
     portable = work / "portable"
     subprocess.run(["ditto", "-x", "-k", str(ROOT / "packages" / f"{prefix}-portable.zip"),
                     str(portable)], check=True)
@@ -101,8 +100,9 @@ def main():
     args = parser.parse_args()
     if sys.platform not in ("linux", "darwin"):
         raise RuntimeError("Run this check on Linux or macOS.")
-    target = "linux-x64" if sys.platform == "linux" else "macos-" + (
-        "arm64" if platform.machine() == "arm64" else "x64")
+    if sys.platform == "darwin" and platform.machine() != "arm64":
+        raise RuntimeError("The macOS check requires Apple Silicon and an arm64 Python.")
+    target = "linux-x64" if sys.platform == "linux" else "macos-arm64"
     manifest = ROOT / "packages" / f"SHA256SUMS-{target}.txt"
     for line in manifest.read_text(encoding="utf-8").splitlines():
         digest, name = line.split("  ", 1)

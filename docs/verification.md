@@ -4,15 +4,15 @@ Release checks cover the application, bundled extractor, installers and update r
 
 ## Application tests
 
-The release workflow runs the test suite on Windows x64, Ubuntu 22.04 x64, macOS 15 arm64 and macOS 15 Intel with Python 3.12 and PySide6 Essentials 6.10.3. Each rebuilt release must pass all four jobs.
+The release workflow runs the test suite on Windows x64, Ubuntu 22.04 x64 and macOS 15 arm64 with Python 3.12 and PySide6 Essentials 6.10.3. Each rebuilt release must pass all three jobs.
 
 | Check | Result |
 | --- | --- |
-| Complete test suite | 87 tests |
+| Previous complete test suite baseline | 87 tests |
 | Actual patched native engine | 37 extraction checks |
 | Packaged Windows application | Native window opens; bundled extraction succeeds with a restricted PATH and no development Python |
 | Windows setup | Installed to an isolated project folder, opened the app, extracted a fixture and uninstalled |
-| Distribution inputs | Pinned source hashes, version, notices and four platform jobs checked |
+| Distribution inputs | Pinned source hashes, version, notices and platform jobs checked |
 | UI inspection | Default 1060×780, minimum 900×660 with details open, and About inspected |
 
 The tests cover:
@@ -36,15 +36,15 @@ Source review found missing native compatibility declarations. The project-owned
 
 ## Native release checks
 
-The [desktop build workflow](../.github/workflows/build.yml) builds and tests every distribution on its target operating system. Publication requires all four jobs to pass.
+The [desktop build workflow](../.github/workflows/build.yml) builds and tests every distribution on its target operating system. Publication requires all three jobs to pass.
 
 | Distribution | Verified behavior |
 | --- | --- |
 | Windows setup | Temporary installation, native app startup, exact synthetic extraction, invalid-input rejection and uninstall |
 | Linux portable tar.gz | Extracted archive, executable permissions, native X11 window and extraction |
 | Linux DEB | Extracted payload, desktop entry, system installation, reinstallation, extraction and removal |
-| macOS arm64 and Intel ZIP | Extracted app, matching architecture, ad-hoc signature, native Cocoa window and extraction |
-| macOS arm64 and Intel DMG | Read-only mount, Applications link, app copy, signature, native window and extraction |
+| macOS arm64 ZIP | Extracted app, matching architecture, ad-hoc signature, native Cocoa window and extraction |
+| macOS arm64 DMG | Read-only mount, Applications link, app copy, signature, native window and extraction |
 
 Packaged checks remove development Python and Qt paths and restrict PATH to system directories. Tests verify unchanged input files, exact extracted fixture bytes and rejection of invalid PKGs. Every packaged copy also makes a real startup request to the GitHub release API. Before a public release exists, GitHub returns 404; after publication, the installed Windows copy must report the current release.
 

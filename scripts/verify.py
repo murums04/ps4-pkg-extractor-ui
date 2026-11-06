@@ -165,7 +165,7 @@ def verify_distribution():
     for name in required:
         assert (ROOT / name).stat().st_size > 0, name
     workflow = (ROOT / ".github/workflows/build.yml").read_text(encoding="utf-8")
-    for runner in ("windows-latest", "macos-15", "macos-15-intel", "ubuntu-22.04"):
+    for runner in ("windows-latest", "macos-15", "ubuntu-22.04"):
         assert runner in workflow, runner
     for script in (ROOT / "scripts").glob("*.py"):
         compile(script.read_text(encoding="utf-8"), str(script), "exec")

@@ -129,13 +129,28 @@ def test_invalid_update_response_can_be_retried(app, server):
 @pytest.mark.parametrize(("system", "machine", "suffix"), [
     ("win32", "AMD64", "windows-x64-portable.zip"),
     ("darwin", "arm64", "macos-arm64-portable.zip"),
-    ("darwin", "x86_64", "macos-x64-portable.zip"),
     ("linux", "x86_64", "linux-x64-portable.tar.gz"),
 ])
 def test_update_download_names_match_pkg_packages(system, machine, suffix):
     assert portable_asset_name("0.1.1", system, machine) == f"ps4-pkg-extractor-ui-0.1.1-{suffix}"
     release = parse_release(release_data("0.1.1", system, machine), "0.1.0", system, machine)
     assert release.download_url == f"{REPOSITORY}/releases/download/v0.1.1/ps4-pkg-extractor-ui-0.1.1-{suffix}"
+
+
+@pytest.mark.parametrize("architectures", [("x64",), ("arm64",), ("x64", "arm64")])
+def test_intel_macos_uses_release_page(architectures):
+    data = release_data("0.1.1")
+    data["assets"] = []
+    for architecture in architectures:
+        name = f"ps4-pkg-extractor-ui-0.1.1-macos-{architecture}-portable.zip"
+        data["assets"].append({
+            "name": name, "state": "uploaded",
+            "browser_download_url": f"{REPOSITORY}/releases/download/v0.1.1/{name}",
+        })
+    assert portable_asset_name("0.1.1", "darwin", "x86_64") is None
+    release = parse_release(data, "0.1.0", "darwin", "x86_64")
+    assert release.download_url == ""
+    assert release.release_url == f"{REPOSITORY}/releases/tag/v0.1.1"
 
 
 def test_update_links_from_another_repository_are_rejected():

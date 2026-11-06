@@ -23,9 +23,9 @@ The build verifies the pinned extractor sources, applies the encrypted-entry cor
 
 Windows 10 version 1903 or newer is required by the UTF-8 process code page. The manifest change uses `scripts/windows_manifest.py` and `packaging/backend-windows.manifest`. The extractor links Crypto++, zlib and the GCC/MinGW runtime statically; its remaining DLL imports are Windows system libraries.
 
-## macOS arm64 or x64
+## macOS arm64
 
-Use a native Python for the intended architecture. Install native dependencies with Homebrew:
+Use Apple Silicon with a native arm64 Python. Install native dependencies with Homebrew:
 
 ```sh
 brew install cmake cryptopp zlib

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Updated Pillow to 13.0.0, cryptography to 50.0.0 and setuptools to 84.1.0.
+- Removed macOS Intel builds and downloads; macOS now targets Apple Silicon only.
+
 ## 0.1.0
 
 - PKG queue, drag and drop, output selection, progress and cancellation.

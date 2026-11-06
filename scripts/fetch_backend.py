@@ -11,13 +11,15 @@ RELEASE = "PKG_EXTRACTOR_1_1"
 
 
 def main():
-    target = ROOT / "backend"
-    target.mkdir(exist_ok=True)
     windows = sys.platform == "win32"
     if sys.platform not in ("win32", "darwin", "linux"):
         raise RuntimeError("Unsupported extractor build platform.")
     if windows and platform.machine().lower() not in ("amd64", "x86_64"):
         raise RuntimeError("The Windows extractor requires x64.")
+    if sys.platform == "darwin" and platform.machine() != "arm64":
+        raise RuntimeError("The macOS extractor requires Apple Silicon and an arm64 Python.")
+    target = ROOT / "backend"
+    target.mkdir(exist_ok=True)
     source = ROOT / "vendor/shadps4plus"
     source_manifest = json.loads((source / "SOURCE.json").read_text(encoding="utf-8"))
     for name, hashes in source_manifest["files"].items():
