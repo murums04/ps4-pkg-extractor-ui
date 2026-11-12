@@ -52,9 +52,10 @@ def read_sfo(data: bytes) -> dict[str, str]:
                 raise PackageError("Duplicate param.sfo key.")
             if kind == 0x0204:
                 value = data[values + value_offset:values + value_offset + length]
-                if not value.endswith(b"\0"):
+                if value and not value.endswith(b"\0"):
                     raise PackageError("Unterminated param.sfo string.")
-                result[key] = value[:-1].decode("utf-8")
+                # Only IDs and the category are checked; display strings need not be valid UTF-8.
+                result[key] = value[:-1].decode("utf-8", errors="replace")
         except UnicodeDecodeError as error:
             raise PackageError("Invalid text in param.sfo.") from error
     return result
@@ -87,7 +88,8 @@ def read_package(path: Path) -> PackageInfo:
                 (content_offset, content_size, pfs_offset, pfs_size, pfs_cache_size))
             # License-only DLC may leave the total size field unset.
             if declared_size != file_size and not (declared_size == 0 and license_only):
-                raise PackageError("The PKG size does not match its header. The file may be incomplete.")
+                raise PackageError("The PKG size does not match its header. The file may be incomplete "
+                                   "or one part of a split package; merge split parts first.")
             content_id = header[0x40:0x64].rstrip(b"\0").decode("ascii", errors="strict")
             match = re.fullmatch(r"[A-Z]{2}\d{4}-([A-Z]{4}\d{5})_\d{2}-([A-Za-z0-9_]{1,16})", content_id)
             if not match:

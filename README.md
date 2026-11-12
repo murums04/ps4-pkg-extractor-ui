@@ -20,13 +20,13 @@ Community GUI by **murums**, based on the [AzaharPlus/shadPS4Plus PKG extractor]
 
 ## Download
 
-**Version 0.1.1** · [SHA-256 checksums](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/SHA256SUMS.txt)
+**Version 0.1.2** · [SHA-256 checksums](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/SHA256SUMS.txt)
 
 | Platform | Installer | Portable |
 | --- | --- | --- |
-| Windows x64 | [Setup EXE](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-windows-x64-setup.exe) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-windows-x64-portable.zip) |
-| macOS · Apple Silicon | [DMG](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-macos-arm64.dmg) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-macos-arm64-portable.zip) |
-| Linux x64 | [DEB](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-linux-x64.deb) | [tar.gz](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.1-linux-x64-portable.tar.gz) |
+| Windows x64 | [Setup EXE](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.2-windows-x64-setup.exe) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.2-windows-x64-portable.zip) |
+| macOS · Apple Silicon | [DMG](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.2-macos-arm64.dmg) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.2-macos-arm64-portable.zip) |
+| Linux x64 | [DEB](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.2-linux-x64.deb) | [tar.gz](https://github.com/murums04/ps4-pkg-extractor-ui/releases/latest/download/ps4-pkg-extractor-ui-0.1.2-linux-x64-portable.tar.gz) |
 
 Choose an installer for normal use. All app packages include Python, Qt and the extractor. GitHub's **Code → Download ZIP** contains source code.
 
@@ -38,7 +38,7 @@ Windows executables are unsigned; macOS apps are ad-hoc signed and not notarized
 
 ## Use
 
-1. Drop `.pkg` files or select **Add files**.
+1. Drop `.pkg` files or folders, or select **Add files**.
 2. Choose an **Output folder**; it defaults to the first input's folder.
 3. Select **Extract PKG**, then **Open output folder**. Use **Show details** for errors and paths.
 
@@ -53,7 +53,7 @@ Output/
 
 Games use their title ID; updates add `-patch`. Existing names get numbered alternatives. DLC retains its entitlement subdirectory inside a separate CUSA folder. No extra folder uses the PKG filename.
 
-Inputs stay read-only. **Extract again** creates another copy. Cancel or close to discard the current partial output and keep completed results. Failed files do not stop the queue.
+Inputs stay read-only. **Extract remaining** extracts only unfinished packages; **Extract again** creates another copy of all. Cancel or close to discard the current partial output and keep completed results. Failed files do not stop the queue.
 
 ## Updates & privacy
 
@@ -63,7 +63,7 @@ The app processes your PKG files locally. It checks this repository's latest sta
 
 Builds the shadPS4Plus **1.1** engine from pinned sources with a correction for incomplete encrypted metadata blocks. The UI adds bounded metadata checks, cancellation, separate outputs and detection of reported engine errors.
 
-Tests cover synthetic packages, known encrypted metadata and local Windows extraction of a real game, update and license-only DLC. License-only DLC may omit the total-size field; the app still checks entry bounds and content metadata. Some upstream file-write and decompression checks remain limited, so a completed job does not certify the integrity of arbitrary game contents. Use packages you trust.
+Tests cover synthetic packages, known encrypted metadata and local Windows extraction of a real game, update and license-only DLC. License-only DLC may omit the total-size field; the app still checks entry bounds and content metadata. A completed job does not certify the integrity of arbitrary game contents. Use packages you trust.
 
 See [format limits and test coverage](docs/verification.md), [build/CLI instructions](docs/building.md) and [release notes](docs/release-notes.md).
 

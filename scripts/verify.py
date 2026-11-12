@@ -2,10 +2,10 @@ import argparse
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 import zipfile
 from pathlib import Path
@@ -58,13 +58,22 @@ def check_executable(executable: Path, work: Path):
     assert observation["visible"] and observation["width"] >= 900
     assert observation["platform"] == expected_platform
     assert Path(observation["extractor"]).is_file()
-    update_report = work / "updates.json"
-    subprocess.run([str(executable), "--check-updates", str(update_report)], cwd=work, env=environment,
-                   timeout=30, check=True, **options)
-    update = json.loads(update_report.read_text(encoding="utf-8"))
     endpoint = "https://api.github.com/repos/murums04/ps4-pkg-extractor-ui/releases/latest"
-    assert update["endpoint"] == endpoint and update["requests"] == [endpoint]
-    assert update["state"] in {"current", "available", "unpublished"}
+    for attempt in range(3):
+        update_report = work / f"updates-{attempt}.json"
+        subprocess.run([str(executable), "--check-updates", str(update_report)], cwd=work, env=environment,
+                       timeout=30, check=False, **options)
+        update = json.loads(update_report.read_text(encoding="utf-8"))
+        print(f"PACKAGED_UPDATE_CHECK: {update}")
+        assert update["endpoint"] == endpoint and update["requests"] == [endpoint]
+        # Shared CI addresses can exhaust GitHub's anonymous API limit; that is not an app failure.
+        if update["message"] != "GitHub rate limit. Retry later.":
+            break
+        time.sleep(20)
+    if update["message"] == "GitHub rate limit. Retry later.":
+        print("WARNING: GitHub rate-limited the packaged update check; request path verified only.")
+    else:
+        assert update["state"] in {"current", "available", "unpublished"}
     print(f"PACKAGED_UPDATE_CHECK_VERIFIED: {expected_platform}, {update['state']}")
     source = write_pkg(work, "日本語 & fixture.pkg", extra_data=b"packaged engine check")
     original = source.read_bytes()

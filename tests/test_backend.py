@@ -64,3 +64,24 @@ def test_filename_text_is_not_a_backend_record(tmp_path, name):
     backend = implementation()
     output = backend.extract_package(write_pkg(tmp_path, name), tmp_path / "out", command("success"))
     assert (output / "example.txt").is_file()
+
+def test_locked_partial_output_keeps_the_cancellation(tmp_path, monkeypatch):
+    backend = implementation()
+    source = write_pkg(tmp_path)
+    cancel = threading.Event()
+    messages = []
+
+    def locked(path):
+        raise PermissionError("locked by another process")
+
+    monkeypatch.setattr(backend.shutil, "rmtree", locked)
+    with pytest.raises(backend.ExtractionCancelled):
+        backend.extract_package(source, tmp_path / "out", command("wait"), cancel,
+                                lambda current, total: cancel.set(), messages.append)
+    assert any("Partial output remains" in message for message in messages)
+
+def test_free_space_check_rejects_too_small_output_volume(tmp_path):
+    backend = implementation()
+    backend.check_free_space(tmp_path, 1)
+    with pytest.raises(backend.ExtractionError, match="Not enough free space"):
+        backend.check_free_space(tmp_path, 10**18)

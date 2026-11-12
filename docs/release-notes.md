@@ -1,27 +1,20 @@
-# murums PS4 PKG Extractor UI 0.1.1
-
-- Stop extraction on native file-write and decompression errors.
-- Reject unsafe package output paths.
-- Fixed CLI report errors and output-folder paths.
-- Update Pillow, cryptography and setuptools.
-- macOS builds now target Apple Silicon only.
+- Adding packages to a finished queue extracts only the new ones; failed packages can be retried without duplicate folders.
+- Dropping a folder adds the PKG files it contains; drops onto the package list work too.
+- Shows available updates in the main window.
+- Rejects relative output paths that would depend on the app's start folder.
+- Cleanup problems no longer hide the real extraction result.
+- Accepts packages with non-UTF-8 display titles; clearer message for incomplete or split packages.
+- Checks free space before extraction.
+- Delete removes selected packages; cleaner table header and About links.
 
 | Platform | Installer | Portable |
 | --- | --- | --- |
-| Windows x64 | [Setup EXE](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.1/ps4-pkg-extractor-ui-0.1.1-windows-x64-setup.exe) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.1/ps4-pkg-extractor-ui-0.1.1-windows-x64-portable.zip) |
-| macOS · Apple Silicon | [DMG](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.1/ps4-pkg-extractor-ui-0.1.1-macos-arm64.dmg) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.1/ps4-pkg-extractor-ui-0.1.1-macos-arm64-portable.zip) |
-| Linux x64 | [DEB](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.1/ps4-pkg-extractor-ui-0.1.1-linux-x64.deb) | [tar.gz](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.1/ps4-pkg-extractor-ui-0.1.1-linux-x64-portable.tar.gz) |
+| Windows x64 | [Setup EXE](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.2/ps4-pkg-extractor-ui-0.1.2-windows-x64-setup.exe) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.2/ps4-pkg-extractor-ui-0.1.2-windows-x64-portable.zip) |
+| macOS · Apple Silicon | [DMG](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.2/ps4-pkg-extractor-ui-0.1.2-macos-arm64.dmg) | [ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.2/ps4-pkg-extractor-ui-0.1.2-macos-arm64-portable.zip) |
+| Linux x64 | [DEB](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.2/ps4-pkg-extractor-ui-0.1.2-linux-x64.deb) | [tar.gz](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.2/ps4-pkg-extractor-ui-0.1.2-linux-x64-portable.tar.gz) |
 
-Choose an installer for normal use. Portable packages need full extraction. Python, Qt and the extractor are included; GitHub's **Source code** downloads do not contain the app.
+[SHA-256 checksums](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.2/SHA256SUMS.txt) · [Source ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.2/ps4-pkg-extractor-ui-0.1.2-source.zip)
 
-[SHA-256 checksums](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.1/SHA256SUMS.txt) · [Source ZIP](https://github.com/murums04/ps4-pkg-extractor-ui/releases/download/v0.1.1/ps4-pkg-extractor-ui-0.1.1-source.zip).
+Requires Windows 10 1903+, macOS 15+ on Apple Silicon, or Ubuntu 22.04+. Windows executables are unsigned; Mac apps are ad-hoc signed and not notarized. Python, Qt and the extractor are included.
 
-Local macOS arm64 checks pass 148 tests, including 82 with the native extractor. Generated encrypted PFS fixtures cover exact payload output, invalid paths, decompression failures and write failures. The release workflow requires all three platform jobs to pass before publication.
-
-Earlier Windows checks for 0.1.0 extracted a real game, update and license-only DLC twice, compared all output files by SHA-256 and checked encrypted metadata against an independent decryption. The source patch corrects the varying final bytes previously produced in `sce_sys/npbind.dat`.
-
-Windows executables are unsigned and require Windows 10 version 1903 or newer. macOS requires Apple Silicon and version 15 or newer; apps are ad-hoc signed and not notarized. Linux packages target Ubuntu 22.04 or newer. The extractor does not certify the full integrity of game contents.
-
-[Installation and supported systems](https://github.com/murums04/ps4-pkg-extractor-ui/blob/v0.1.1/docs/building.md) · [Test coverage](https://github.com/murums04/ps4-pkg-extractor-ui/blob/v0.1.1/docs/verification.md).
-
-UI: GPL-3.0-only. Extractor: GPL-2.0-or-later. Bundled dependency notices and corresponding source references are included.
+[Installation](https://github.com/murums04/ps4-pkg-extractor-ui/blob/v0.1.2/docs/building.md) · UI: GPL-3.0-only; extractor: GPL-2.0-or-later. Bundled dependency notices included.

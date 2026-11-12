@@ -37,7 +37,7 @@ The workflow tests the Windows UTF-8 manifest with Japanese, German and emoji na
 
 The Windows installer test uses a temporary installation and removes it after checking startup and extraction.
 
-Source review found missing native compatibility declarations. The project-owned `packaging/native/compatibility.h` supplies `<optional>` and maps the upstream Darwin file-seek call to `fseeko`, preserving the pinned source files. Git attributes preserve upstream bytes during Windows checkouts.
+The pinned upstream source lacks some native compatibility declarations. The project-owned `packaging/native/compatibility.h` supplies `<optional>` and maps the upstream Darwin file-seek call to `fseeko`, preserving the pinned source files. Git attributes preserve upstream bytes during Windows checkouts.
 
 ## Native release checks
 
@@ -51,7 +51,7 @@ The [desktop build workflow](../.github/workflows/build.yml) builds and tests ev
 | macOS arm64 ZIP | Extracted app, matching architecture, ad-hoc signature, native Cocoa window and extraction |
 | macOS arm64 DMG | Read-only mount, Applications link, app copy, signature, native window and extraction |
 
-Packaged checks remove development Python and Qt paths and restrict PATH to system directories. Tests verify unchanged input files, exact extracted fixture bytes and rejection of invalid PKGs. Every packaged copy also makes a real startup request to the GitHub release API. Before a public release exists, GitHub returns 404; after publication, the installed Windows copy must report the current release.
+Packaged checks remove development Python and Qt paths and restrict PATH to system directories. Tests verify unchanged input files, exact extracted fixture bytes and rejection of invalid PKGs. Every packaged copy also makes a real startup request to the GitHub release API.
 
 The runtime packages contain the app, extractor, needed libraries and license notices, without test suites or build scripts.
 

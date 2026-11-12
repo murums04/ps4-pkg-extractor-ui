@@ -109,6 +109,64 @@ def test_unresolvable_home_disables_extraction(tmp_path, app, monkeypatch):
     screen.close()
 
 
+def test_relative_output_is_rejected(tmp_path, app):
+    screen = window(app)
+    screen.add_files([write_pkg(tmp_path)])
+    screen.output_edit.setText("output")
+    assert not screen.extract_button.isEnabled()
+    assert "full folder path" in screen.output_hint.text()
+    screen.close()
+
+
+def test_adding_files_extracts_only_new_ones(tmp_path, app):
+    screen = window(app)
+    output = tmp_path / "output"
+    screen.add_files([write_pkg(tmp_path)])
+    screen.output_edit.setText(str(output))
+    screen.start_extraction()
+    settle(app, screen)
+    added = tmp_path / "added.pkg"
+    added.write_bytes(screen.sources[0].read_bytes())
+    screen.add_files([added])
+    screen.start_extraction()
+    settle(app, screen)
+    assert sorted(path.name for path in output.iterdir()) == ["CUSA00001", "CUSA00001 (2)"]
+    assert screen.results == {1: "Extracted"}
+    assert screen.status_label.text() == "1 extracted"
+    assert screen.extract_button.text() == "Extract again"
+    screen.close()
+
+
+def test_button_label_follows_unfinished_packages(tmp_path, app):
+    screen = window(app)
+    source = write_pkg(tmp_path)
+    invalid = tmp_path / "broken.pkg"
+    invalid.write_bytes(b"broken")
+    screen.add_files([source, invalid])
+    screen.output_edit.setText(str(tmp_path / "output"))
+    assert screen.extract_button.text() == "Extract PKG"
+    screen.start_extraction()
+    settle(app, screen)
+    assert screen.extract_button.text() == "Extract remaining"
+    screen.table.selectRow(1)
+    screen.remove_selected()
+    assert screen.extract_button.text() == "Extract again"
+    screen.table.selectRow(0)
+    screen.remove_selected()
+    screen.add_files([source])
+    assert screen.extract_button.text() == "Extract PKG"
+    screen.close()
+
+
+def test_dropped_folder_adds_packages(tmp_path, app):
+    screen = window(app)
+    source = write_pkg(tmp_path)
+    (tmp_path / "notes.txt").write_text("skip")
+    screen.add_files([tmp_path])
+    assert screen.sources == [source.resolve()]
+    screen.close()
+
+
 def test_close_cancels_work_and_waits_for_cleanup(tmp_path, app):
     screen = window(app, "wait")
     screen.show()

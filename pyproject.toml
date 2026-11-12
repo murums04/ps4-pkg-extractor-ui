@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ps4-pkg-extractor-ui"
-version = "0.1.1"
+version = "0.1.2"
 description = "Desktop UI for the shadPS4Plus PS4 PKG extractor"
 requires-python = ">=3.12"
 license = "GPL-3.0-only"

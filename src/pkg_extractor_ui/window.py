@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl, Signal
-from PySide6.QtGui import QColor, QDesktopServices, QIcon
+from PySide6.QtCore import QEvent, Qt, QUrl, Signal
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QFileDialog, QFrame, QHBoxLayout, QHeaderView, QLabel,
     QLineEdit, QMainWindow, QPlainTextEdit, QProgressBar, QPushButton, QSplitter,
@@ -16,6 +16,23 @@ from .metadata import PackageError, read_package
 from .native_theme import install_native_theme
 from .theme import STYLE
 from .updates import UpdateChecker
+
+OUTPUT_HINT = "Folders by title ID: CUSA…, CUSA…-patch. Existing names get numbered copies."
+
+
+def expand_folders(paths, suffixes):
+    """Yield dropped files, plus matching files directly inside dropped folders."""
+    for path in map(Path, paths):
+        try:
+            if path.is_dir():
+                matches = sorted(child for child in path.iterdir()
+                                 if child.suffix.lower() in suffixes and child.is_file())
+                if matches:
+                    yield from matches
+                    continue
+        except OSError:
+            pass
+        yield path
 
 
 def label(text, name="", wrap=False):
@@ -73,8 +90,11 @@ class MainWindow(QMainWindow):
         self.extractor_command = command
         self.sources = []
         self.results = {}
+        self.completed = set()
+        self.batch_rows = []
         self.worker = None
         self.close_after_cancel = False
+        self.setAcceptDrops(True)
         self.update_checker = UpdateChecker(self)
         self.setWindowTitle(f"murums PS4 PKG Extractor UI · {__version__}")
         self.setWindowIcon(QIcon(str(asset_path("icon.svg"))))
@@ -82,6 +102,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 660)
         self.setStyleSheet(STYLE)
         self.build_interface()
+        self.update_checker.changed.connect(self.refresh_update_notice)
         self.update_actions()
 
     def build_interface(self):
@@ -97,6 +118,10 @@ class MainWindow(QMainWindow):
         identity.addWidget(label("murums PS4 PKG Extractor UI", "Title"))
         identity.addWidget(label("Extract PS4 packages into separate folders.", "Subtitle"))
         header.addLayout(identity, 1)
+        self.update_notice = QPushButton("Update available")
+        self.update_notice.clicked.connect(self.show_about)
+        self.update_notice.hide()
+        header.addWidget(self.update_notice, 0, Qt.AlignmentFlag.AlignTop)
         about = QPushButton("About")
         about.setObjectName("Quiet")
         about.clicked.connect(self.show_about)
@@ -131,6 +156,8 @@ class MainWindow(QMainWindow):
         self.table.setShowGrid(False)
         self.table.verticalHeader().hide()
         self.table.verticalHeader().setDefaultSectionSize(44)
+        self.table.horizontalHeader().setDefaultAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         for column in (0, 3):
             self.table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeMode.Stretch)
         for column, width in ((1, 85), (2, 120)):
@@ -138,6 +165,11 @@ class MainWindow(QMainWindow):
             self.table.setColumnWidth(column, width)
         self.table.setMinimumHeight(100)
         self.table.itemSelectionChanged.connect(self.update_actions)
+        # macOS labels Backspace as "delete", so both keys remove selected rows.
+        for key in (QKeySequence(QKeySequence.StandardKey.Delete), QKeySequence(Qt.Key.Key_Backspace)):
+            remove_shortcut = QShortcut(key, self.table)
+            remove_shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
+            remove_shortcut.activated.connect(self.remove_selected)
         self.details = QPlainTextEdit()
         self.details.setReadOnly(True)
         self.details.setAccessibleName("Extraction details")
@@ -164,13 +196,14 @@ class MainWindow(QMainWindow):
         self.output_edit.setPlaceholderText("Choose a PKG output folder")
         self.output_edit.setAccessibleName("Output folder")
         output_label.setBuddy(self.output_edit)
-        self.output_edit.textChanged.connect(self.update_actions)
+        self.output_edit.textChanged.connect(self.output_changed)
         output_row.addWidget(self.output_edit, 1)
         self.browse_button = QPushButton("Browse…")
         self.browse_button.clicked.connect(self.choose_output)
         output_row.addWidget(self.browse_button)
         output_layout.addLayout(output_row)
-        output_layout.addWidget(label("Folders by title ID: CUSA…, CUSA…-patch. Existing names get numbered copies.", "Hint"))
+        self.output_hint = label(OUTPUT_HINT, "Hint")
+        output_layout.addWidget(self.output_hint)
         layout.addWidget(panel)
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
@@ -213,7 +246,7 @@ class MainWindow(QMainWindow):
         if self.worker is not None:
             return
         skipped = 0
-        for path in paths:
+        for path in expand_folders(paths, {".pkg"}):
             try:
                 path = Path(path).resolve(strict=True)
                 if not path.is_file() or path.suffix.lower() != ".pkg" or path in self.sources:
@@ -239,7 +272,6 @@ class MainWindow(QMainWindow):
         if self.sources and not self.output_edit.text():
             self.output_edit.setText(str(self.sources[0].parent))
         self.results.clear()
-        self.extract_button.setText("Extract PKG")
         self.queue_label.setText(f"Files · {len(self.sources)}")
         self.status_label.setText(f"Queued: {len(self.sources)}" +
                                   (f" · Skipped: {skipped} duplicates or non-PKG files" if skipped else ""))
@@ -251,6 +283,7 @@ class MainWindow(QMainWindow):
         for row in sorted({index.row() for index in self.table.selectedIndexes()}, reverse=True):
             self.sources.pop(row)
             self.table.removeRow(row)
+        self.completed &= set(self.sources)
         self.results.clear()
         self.queue_label.setText(f"Files · {len(self.sources)}")
         self.status_label.setText(f"Queued: {len(self.sources)}")
@@ -261,12 +294,12 @@ class MainWindow(QMainWindow):
             return
         self.sources.clear()
         self.results.clear()
+        self.completed.clear()
         self.table.setRowCount(0)
         self.details.clear()
         self.progress.setValue(0)
         self.queue_label.setText("Files · 0")
         self.status_label.setText("Add PKG files to get started.")
-        self.extract_button.setText("Extract PKG")
         self.update_actions()
 
     def choose_output(self):
@@ -274,15 +307,26 @@ class MainWindow(QMainWindow):
         if path:
             self.output_edit.setText(path)
 
+    def output_changed(self):
+        # Results in another folder do not count as done for the new one.
+        self.completed.clear()
+        self.update_actions()
+
     def update_actions(self):
         busy = self.worker is not None
         output_text = self.output_edit.text()
         try:
-            existing = bool(output_text) and Path(output_text).expanduser().is_dir()
-            valid_output = bool(output_text.strip())
+            folder = Path(output_text).expanduser()
+            # Relative paths would depend on the folder the app was started from.
+            valid_output = bool(output_text.strip()) and folder.is_absolute()
+            existing = valid_output and folder.is_dir()
         except (OSError, ValueError, RuntimeError):
             existing = False
             valid_output = False
+        if not output_text or valid_output:
+            self.output_hint.setText(OUTPUT_HINT)
+        else:
+            self.output_hint.setText("Enter a full folder path or choose Browse…")
         self.drop_area.setEnabled(not busy)
         self.output_edit.setEnabled(not busy)
         self.browse_button.setEnabled(not busy)
@@ -291,6 +335,11 @@ class MainWindow(QMainWindow):
         self.extract_button.setEnabled(not busy and bool(self.sources) and valid_output)
         self.open_button.setEnabled(existing)
         self.cancel_button.setVisible(busy)
+        done = sum(path in self.completed for path in self.sources)
+        if self.sources and done == len(self.sources):
+            self.extract_button.setText("Extract again")
+        else:
+            self.extract_button.setText("Extract remaining" if done else "Extract PKG")
 
     def start_extraction(self):
         if self.worker is not None or not self.extract_button.isEnabled():
@@ -298,10 +347,15 @@ class MainWindow(QMainWindow):
         self.results.clear()
         self.details.clear()
         self.progress.setRange(0, 0)
-        for row in range(len(self.sources)):
+        # Only unfinished rows run again; a fully extracted queue extracts every package once more.
+        self.batch_rows = [row for row, path in enumerate(self.sources) if path not in self.completed]
+        if not self.batch_rows:
+            self.completed.clear()
+            self.batch_rows = list(range(len(self.sources)))
+        for row in self.batch_rows:
             self.set_row(row, "Waiting", "—")
-        self.worker = ExtractionWorker(list(self.sources), Path(self.output_edit.text()),
-                                       self, self.extractor_command)
+        batch = [self.sources[row] for row in self.batch_rows]
+        self.worker = ExtractionWorker(batch, Path(self.output_edit.text()), self, self.extractor_command)
         self.worker.file_started.connect(self.file_started)
         self.worker.progress_changed.connect(self.update_progress)
         self.worker.message.connect(self.details.appendPlainText)
@@ -312,16 +366,24 @@ class MainWindow(QMainWindow):
         self.update_actions()
         self.worker.start()
 
-    def file_started(self, row):
+    def batch_row(self, index):
+        # Worker signals count within the running batch; outside a batch they are queue rows.
+        return self.batch_rows[index] if self.batch_rows else index
+
+    def batch_size(self):
+        return max(len(self.batch_rows) or len(self.sources), 1)
+
+    def file_started(self, index):
+        row = self.batch_row(index)
         self.set_row(row, "Extracting", "—")
         self.progress.setRange(0, 0)
-        self.status_label.setText(f"Extracting {row + 1} of {len(self.sources)} · {self.sources[row].name}")
+        self.status_label.setText(f"Extracting {index + 1} of {self.batch_size()} · {self.sources[row].name}")
 
-    def update_progress(self, row, current, total):
+    def update_progress(self, index, current, total):
         self.progress.setRange(0, 100)
         percent = min(99, int(current * 100 / max(total, 1)))
-        self.progress.setValue(int((row * 100 + percent) / max(len(self.sources), 1)))
-        self.status_label.setText(f"Package {row + 1} of {len(self.sources)} · Entry {current:,} of {total:,}")
+        self.progress.setValue(int((index * 100 + percent) / self.batch_size()))
+        self.status_label.setText(f"Package {index + 1} of {self.batch_size()} · Entry {current:,} of {total:,}")
 
     def set_row(self, row, state, result):
         colors = {"Extracted": "#73e0be", "Failed": "#ffb4b4",
@@ -330,13 +392,17 @@ class MainWindow(QMainWindow):
         self.table.item(row, 2).setForeground(QColor(colors.get(state, "#a7bbce")))
         self.table.item(row, 3).setText(result)
 
-    def file_finished(self, row, state, detail):
+    def file_finished(self, index, state, detail):
+        row = self.batch_row(index)
         self.results[row] = state
+        if state == "Extracted":
+            self.completed.add(self.sources[row])
         self.set_row(row, state, Path(detail).name if state == "Extracted" else detail)
         self.table.item(row, 3).setToolTip(detail)
         self.details.appendPlainText(f"{state} · {self.sources[row].name}\n{detail}\n")
         self.progress.setRange(0, 100)
-        self.progress.setValue(int((row + 1) * 100 / max(len(self.sources), 1)))
+        if state != "Cancelled":
+            self.progress.setValue(int((index + 1) * 100 / self.batch_size()))
         if state == "Failed":
             self.details.show()
             self.details_button.setText("Hide details")
@@ -345,10 +411,11 @@ class MainWindow(QMainWindow):
         worker = self.worker
         self.worker = None
         worker.deleteLater()
-        counts = {state: list(self.results.values()).count(state)
-                  for state in ("Extracted", "Failed", "Cancelled")}
-        self.status_label.setText(" · ".join(f"{count} {state.lower()}" for state, count in counts.items()))
-        self.extract_button.setText("Extract again")
+        self.batch_rows = []
+        states = list(self.results.values())
+        counts = [f"{states.count(state)} {state.lower()}" for state in ("Extracted", "Failed", "Cancelled")
+                  if states.count(state)]
+        self.status_label.setText(" · ".join(counts) or "Nothing extracted.")
         self.update_actions()
         if self.close_after_cancel:
             self.close()
@@ -373,6 +440,25 @@ class MainWindow(QMainWindow):
         dialog = AboutDialog(self.update_checker, self)
         dialog.exec()
         dialog.deleteLater()
+
+    def refresh_update_notice(self):
+        self.update_notice.setVisible(self.update_checker.release is not None)
+
+    def dragEnterEvent(self, event):
+        # Drops outside the drop area, such as onto the package list, add files too.
+        if self.worker is None and event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        if self.worker is None:
+            self.add_files([Path(url.toLocalFile()) for url in event.mimeData().urls() if url.isLocalFile()])
+            event.acceptProposedAction()
+
+    def changeEvent(self, event):
+        # Recheck the output folder after it was created or removed in another app.
+        if event.type() == QEvent.Type.ActivationChange and self.isActiveWindow():
+            self.update_actions()
+        super().changeEvent(event)
 
     def closeEvent(self, event):
         if self.worker is not None:

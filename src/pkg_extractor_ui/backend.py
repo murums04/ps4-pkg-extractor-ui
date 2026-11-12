@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 from .assets import resource_root
@@ -106,9 +107,20 @@ def run_extractor(command, source, staging, working_directory, cancel, progress,
                 process.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 process.kill()
-                process.wait(timeout=5)
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    log("The extractor did not stop after it was killed.")
         reader.join(timeout=3)
     return current, total
+
+
+def check_free_space(output: Path, required: int):
+    # The extracted payload is roughly the PFS image size; the margin avoids rejecting borderline cases.
+    free = shutil.disk_usage(output).free
+    if free < required * 9 // 10:
+        raise ExtractionError(f"Not enough free space: about {required / 1e9:.1f} GB needed, "
+                              f"{free / 1e9:.1f} GB free in the output folder.")
 
 
 def verify_output(staging: Path, info: PackageInfo, total: int):
@@ -158,8 +170,12 @@ def extract_package(source: Path, output: Path, command=None, cancel=None,
             raise ExtractionCancelled("Extraction cancelled.")
         info = read_package(source)
         before = info.source.stat()
-        output = Path(output).expanduser().resolve()
+        try:
+            output = Path(output).expanduser().resolve()
+        except RuntimeError as error:
+            raise ExtractionError(f"Could not resolve the output folder: {error}") from error
         output.mkdir(parents=True, exist_ok=True)
+        check_free_space(output, info.pfs_size)
         command = command or bundled_command()
         staging = Path(tempfile.mkdtemp(prefix=".pkg-", dir=output)).resolve()
         payload = staging / "payload"
@@ -185,10 +201,26 @@ def extract_package(source: Path, output: Path, command=None, cancel=None,
     except (OSError, PackageError) as error:
         raise ExtractionError(str(error)) from error
     finally:
-        if staging is not None and staging.exists() and not preserve_staging:
+        if staging is not None and not preserve_staging:
+            # Report cleanup problems without replacing the extraction result or its error.
+            problem = remove_staging(staging, output)
+            if problem:
+                log(problem)
+
+
+def remove_staging(staging: Path, output: Path, attempts: int = 5) -> str | None:
+    problem = None
+    for attempt in range(attempts):
+        try:
+            if not staging.exists():
+                return None
             if staging.parent != output or not staging.name.startswith(".pkg-") or staging.is_symlink():
-                raise ExtractionError(f"Could not safely remove the partial output at {staging}.")
-            try:
-                shutil.rmtree(staging)
-            except OSError as error:
-                raise ExtractionError(f"Partial output remains at {staging}: {error}") from error
+                return f"Could not safely remove the partial output at {staging}."
+            shutil.rmtree(staging)
+            return None
+        except OSError as error:
+            # Scanners and indexers often lock freshly written files for a moment.
+            problem = f"Partial output remains at {staging}: {error}"
+            if attempt + 1 < attempts:
+                time.sleep(0.2)
+    return problem

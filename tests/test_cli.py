@@ -50,7 +50,10 @@ def test_invalid_report_prevents_extraction(tmp_path, invoke, capsys, kind):
     if kind == "existing":
         report.write_bytes(b"keep me")
     elif kind == "symlink":
-        report.symlink_to(tmp_path / "missing.json")
+        try:
+            report.symlink_to(tmp_path / "missing.json")
+        except OSError as error:
+            pytest.skip(f"Symlinks unavailable: {error}")
     else:
         parent = tmp_path / "parent"
         if kind == "file-parent":

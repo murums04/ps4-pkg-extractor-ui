@@ -36,7 +36,7 @@ if macos:
         icon=str(root / "assets" / "icon.icns"),
         bundle_identifier="io.murums.ps4-pkg-extractor-ui",
         info_plist={
-            "CFBundleShortVersionString": "0.1.1", "CFBundleVersion": "0.1.1",
+            "CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "0.1.2",
             "NSHighResolutionCapable": True, "LSMinimumSystemVersion": "15.0",
         },
     )

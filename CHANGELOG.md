@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.2
+
+- Queue: adding packages after a batch extracts only new packages; "Extract remaining" skips extracted packages.
+- Input: dropped folders add their PKG files; the whole window accepts drops.
+- Output: relative paths are rejected with a hint; the folder is rechecked when the window regains focus.
+- Updates: an "Update available" button appears in the main window.
+- Extraction: staging cleanup problems are logged instead of replacing the actual result or error; a hung extractor no longer crashes the CLI.
+- Metadata: non-UTF-8 display strings in param.sfo no longer reject a package; incomplete or split packages get a clearer message.
+- Extraction: checks free space in the output folder before starting.
+- UI: Delete removes selected rows, aligned table header with rounded corners, labeled About links, summaries without zero counts.
+- Tests run on a fresh checkout and skip symlink checks where Windows denies symlinks.
+
 ## 0.1.1
 
 - Fail extraction on native file-write and decompression errors.

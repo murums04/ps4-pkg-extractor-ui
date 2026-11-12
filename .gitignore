@@ -7,11 +7,6 @@ __pycache__/
 packages/
 backend/
 /licenses/*-runtime/
-.unlazy/
 docs/local/
-/AGENTS.md
-/GATES.md
-/docs/design.md
-/docs/implementation-plan.md
 /docs/images/minimum.png
 /docs/images/about.png
